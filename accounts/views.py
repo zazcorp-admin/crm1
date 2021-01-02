@@ -7,8 +7,12 @@ from .filters import OrderFilter
 from django.contrib.auth.forms import UserCreationForm
 from .forms import CreateUserForm
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from .decorators import unauthenticated_user, allowed_user
 
-
+@login_required(login_url='login')
+@allowed_user(allowed_roles=['admin'])
 def home(request):
     customers = Customer.objects.all()
     orders = Order.objects.all()
@@ -72,10 +76,24 @@ def deleteOrder(request, pk):
     context = {'items': order}
     return render(request, 'accounts/delete.html', context)
 
+@unauthenticated_user
 def loginPage(request):
-    return render(request,'accounts/login.html')
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('/admin/')
+        else:
+            messages.info(request, 'Username or password is incorrect')
+            return redirect(('/login/'))
+    context = {}
+    return render(request,'accounts/login.html', context)
 
+@unauthenticated_user
 def registerPage(request):
+
     form = CreateUserForm()
     if request.method == 'POST':
         form = CreateUserForm(request.POST)
@@ -86,3 +104,12 @@ def registerPage(request):
             return redirect('/login/')
     context = {'form':form}
     return render(request,'accounts/register.html', context)
+
+
+def logoutUser(request):
+    logout(request)
+    return redirect('login')
+
+def userPage(request):
+    context ={}
+    return render(request,'accounts/user.html', context)
