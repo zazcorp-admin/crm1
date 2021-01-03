@@ -5,7 +5,7 @@ from .forms import OrderForm
 from django.forms import inlineformset_factory
 from .filters import OrderFilter
 from django.contrib.auth.forms import UserCreationForm
-from .forms import CreateUserForm
+from .forms import CreateUserForm, CustomerForm
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -126,3 +126,17 @@ def userPage(request):
     pending = orders.filter(status='pending').count()
     context ={'orders':orders,'total_orders':total_orders, 'delivered': delivered, 'pending':pending}
     return render(request,'accounts/user.html', context)
+
+@login_required(login_url='login')
+@allowed_user(allowed_roles=['customer'])
+def accountSettings(request):
+    customer = request.user.customer
+    form = CustomerForm(instance=customer)
+
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, request.FILES, instance=customer)
+        if form.is_valid():
+            form.save()
+
+    context={'form':form}
+    return render(request, 'accounts/account_settings.html', context)
